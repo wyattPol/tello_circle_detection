@@ -141,7 +141,7 @@ class TelloController:
         while True:
             frame_read=self.tello_drone.get_frame_read()           
             gray = cv2.cvtColor(frame_read, cv2.COLOR_BGR2GRAY)  
-            blurred = cv2.GaussianBlur(gray, (5, 5), 0) #gaussian blurry
+            blurred = cv2.GaussianBlur(gray, (9, 9), 0) #gaussian blurry,9 will be best
             edges = cv2.Canny(blurred, 100, 200) #canny edge detect         
             circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=200,
                                        param1=100, param2=30, minRadius=10, maxRadius=100)  #cir detect         
