@@ -65,23 +65,29 @@ class TelloController:
         self.tello_drone.connect()
         self.tello_drone.streamon()
         print('battery',self.tello_drone.get_battery())
-
-        recorder = self.TelloTimer(0.1,self.stop_controller,self.vid_cap)
-
-        recorder.start()
+        #circle detect and move function apply
+        self.tello_drone.takeoff()
+        time.sleep(1)
+        fly_cir=self.TelloTimer(0.1,self.stop_controller,self.detect_circles)
+        fly_cir.start()
         time.sleep(10.0)
+        self.ctr_dir()#manually control in case of  danger,ctr_dir and detect_circles may have movement conflicts(not sure)
+       #if have conflicts then comment ctr_dir
+        time.sleep(1)
+        self.tello_drone.land()
+        time.sleep(1)
+
         '''
-        #record video
-        recorder = Thread(target=self.vid())
-        recorder.start()
-        time.sleep(2.0)
-        recorder.join()
-        '''
-        ###get accaaaaaaaaaaaaaaaaaaaaaddd
+        ###get acc function apply
         acc = self.TelloTimer(0.1,self.stop_controller,self.get_acc)
         angles = self.TelloTimer(0.1, self.stop_controller, self.get_ang)
-        '''
-        #this is key control 
+        
+        #here is dreal time recording function
+        recorder = self.TelloTimer(0.1,self.stop_controller,self.vid_cap)
+        recorder.start()
+        time.sleep(10.0)
+        
+        #this is key control  function
         self.tello_drone.takeoff()
         time.sleep(1)
         angles.start()
@@ -92,7 +98,6 @@ class TelloController:
         self.tello_drone.land()
         time.sleep(1)
         '''
-        cv2.destroyAllWindows()
         self.stop_controller.set()
         self.tello_drone.end()
 
@@ -138,28 +143,58 @@ class TelloController:
         cv2.waitKey(1)
 
     def detect_circles(self):
+        forward_count = 0 #only for obesrving forward command sending times
         while True:
             frame_read=self.tello_drone.get_frame_read()           
             gray = cv2.cvtColor(frame_read, cv2.COLOR_BGR2GRAY)  
-            blurred = cv2.GaussianBlur(gray, (9, 9), 0) #gaussian blurry,9 will be best
+            blurred = cv2.GaussianBlur(gray, (9, 9), 0) #gaussian blurry， 9 will be best
             edges = cv2.Canny(blurred, 100, 200) #canny edge detect         
             circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=200,
-                                       param1=100, param2=30, minRadius=10, maxRadius=100)  #cir detect         
-            # draw  circles on pic
+                                       param1=100, param2=30, minRadius=10, maxRadius=100)
+            
             if circles is not None:
                 circles = np.round(circles[0, :]).astype("int")
                 for (x, y, r) in circles:
                     cv2.circle(frame_read, (x, y), r, (0, 255, 0), 4)
-            # original show
+                    
+                    mask = np.zeros_like(gray)
+                    cv2.circle(mask, (x, y), r, (255, 255, 255), -1)
+                    contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+                    if contours:
+                        M = cv2.moments(contours[0])
+                        center_x = int(M["m10"] / M["m00"])
+                        center_y = int(M["m01"] / M["m00"])
+          #direction control to stabilize at center position   
+        #time sleep may be recommended to use after each move command,uncomment to use           
+                        if center_x < frame_read.shape[1] // 2:
+                            print("Fly left")
+                            self.tello_drone.move_left(30)
+                            #time.sleep(1)
+                        elif center_x > frame_read.shape[1] // 2:
+                            print("Fly right")
+                            self.tello_drone.move_right(30)
+                            #time.sleep(1)
+                        if center_y < frame_read.shape[0] // 2:
+                            print("Fly up")
+                            self.tello_drone.move_up(30)
+                            #time.sleep(1)
+                        elif center_y > frame_read.shape[0] // 2:
+                            print("Fly down")
+                            self.tello_drone.move_down(30)
+                            #time.sleep(1)
+          #move forward all the time even after flying through the circle 
+            forward_count += 1 
+            print(f"Move forward ({forward_count})")
+            self.tello_drone.move_forward(30)
+            #time.sleep(1)
+        #display real time images from camera
             cv2.imshow('Original Frame', frame_read)
-            # canny show
             cv2.imshow('Canny Edge Detection', edges)
-            # exit with q
-            if cv2.waitKey(1) & 0xFF == ord('q'):
-                break        
-        # Release
+            
+            if keyboard.is_pressed('q'):  # ESC
+                break
         cv2.destroyAllWindows()
-        
+            
     def ctr_dir(self):
 
         while True:
@@ -190,5 +225,3 @@ if __name__ == '__main__':
         
     '''
     tc = TelloController()
-
-
