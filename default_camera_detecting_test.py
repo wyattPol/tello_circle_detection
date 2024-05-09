@@ -7,7 +7,7 @@ def detect_circles(camera_index=0):
     while True:
         ret, frame = cap.read()
         gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        blurred = cv2.GaussianBlur(gray, (5, 5), 0)
+        blurred = cv2.GaussianBlur(gray, (9, 9), 0)
         edges = cv2.Canny(blurred, 100, 200)
         
         circles = cv2.HoughCircles(edges, cv2.HOUGH_GRADIENT, dp=1, minDist=200,
