@@ -1,8 +1,15 @@
+# -*- coding: utf-8 -*-
+"""
+Created on Wed May  8 18:34:35 2024
+
+@author: Yiting Wang
+"""
 import cv2
 import numpy as np
 
 def detect_circles(camera_index=0):
     cap = cv2.VideoCapture(camera_index)
+    forward_count = 0
 
     while True:
         ret, frame = cap.read()
@@ -35,7 +42,11 @@ def detect_circles(camera_index=0):
                     elif center_y > frame.shape[0] // 2:
                         print("Fly down")
         
+        forward_count += 1
+        print(f"Move forward ({forward_count})")
+        
         cv2.imshow('Original Frame', frame)
+        cv2.imshow('Grayscale Image', gray)
         cv2.imshow('Canny Edge Detection', edges)
         
         if cv2.waitKey(1) & 0xFF == ord('q'):
@@ -46,4 +57,3 @@ def detect_circles(camera_index=0):
 
 # apply
 detect_circles(camera_index=0)
-
